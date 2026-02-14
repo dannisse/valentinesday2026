@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>YOU IMPUDENT FOOL😭</title>
+    <link rel="stylesheet" href="css/no.css" />
+  </head>
+
+  <body>
+    <header class="top">
+      <h1>HOW DARE YOU REJECT MY EVERLASTING UNDYING LOVE</h1>
+      <p>you will repent for your sins</p>
+    </header>
+
+    <audio controls autoplay loop>
+      <source src="audio/goofyAhh.mp3" type="audio/mpeg" />
+      Your browser does not support the audio element LOL.
+    </audio>
+    <audio controls autoplay loop>
+      <source src="audio/goofyAhh2.mp3" type="audio/mpeg" />
+      Your browser does not support the audio element LOL.
+    </audio>
+
+    <main class="stage">
+      <div id="memeGrid" class="meme-grid" aria-hidden="true"></div>
+    </main>
+
+    <script>
+      document.addEventListener("DOMContentLoaded", () => {
+        const grid = document.getElementById("memeGrid");
+        const audio = document.getElementById("memeAudio");
+        const soundBtn = document.getElementById("soundBtn");
+        const tapOverlay = document.getElementById("tapOverlay");
+        const tapBtn = document.getElementById("tapBtn");
+
+        // Put meme images in /noImg and list them here:
+        const memeFiles = [
+          "noImg/drink.jpg",
+          "noImg/cry.jpg",
+          "noImg/cry2.jpg",
+          "noImg/cry3.jpg",
+          "noImg/cry4.jpg",
+          "noImg/leave.jpg",
+          "noImg/slapMeme.jpg",
+          "noImg/strangleMeme.jpg",
+          "noImg/sad.jpg",
+          "noImg/punch.jpg",
+          "noImg/drink.jpg",
+
+          // add more...
+        ];
+
+        // How many spinning memes you want
+        const memeCount = 120; // crank this up if you want chaos (be mindful of file sizes)
+
+        // Generate the meme spins
+        for (let i = 0; i < memeCount; i++) {
+          const img = document.createElement("img");
+          img.className = "meme";
+          img.loading = "lazy";
+          img.alt = "meme";
+
+          const pick = memeFiles[i % memeFiles.length];
+          img.src = pick;
+
+          grid.appendChild(img);
+        }
+
+        // Try to autoplay (may work because navigation came from a click)
+        function tryPlayAudio() {
+          audio.currentTime = 0;
+          return audio.play();
+        }
+
+        tryPlayAudio().catch(() => {
+          // If blocked, show overlay button to start sound
+          tapOverlay.hidden = false;
+        });
+
+        // Manual controls
+        soundBtn.addEventListener("click", () => {
+          tapOverlay.hidden = true;
+          tryPlayAudio().catch(() => {
+            tapOverlay.hidden = false;
+          });
+        });
+
+        tapBtn.addEventListener("click", () => {
+          tapOverlay.hidden = true;
+          tryPlayAudio().catch(() => {
+            tapOverlay.hidden = false;
+          });
+        });
+      });
+    </script>
+  </body>
+</html>

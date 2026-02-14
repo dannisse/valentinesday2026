@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Be My Valentine</title>
+    <link rel="stylesheet" href="css/valentine.css" />
+  </head>
+  <body>
+    <div id="valentineQuestion"><b>be my valentine?</b></div>
+
+    <button class="answerButton" id="yesButton" onclick="location.href='thankyou.html'">
+      yes
+    </button>
+
+    <button class="answerButton" id="noButton">ew no (╥﹏╥)o</button>
+
+    <br />
+
+    <img
+      src="please.png"
+      height="498px"
+      width="150px"
+      alt="cat asking question"
+      class="responsive"
+    />
+
+    <script>
+      document.addEventListener("DOMContentLoaded", () => {
+        const noBtn = document.getElementById("noButton");
+        const yesBtn = document.getElementById("yesButton");
+
+        // SETTINGS
+        const dodgeEnabled = true;
+
+        // Lower = easier to click (more "fails" -> redirects to no.html)
+        const dodgeChance = 0.85;
+
+        // Meme page
+        const noPage = "no.html";
+
+        // Proximity: lower = it waits longer before running
+        const dangerRadius = 220;
+
+        // Track pointer (and optional proximity-dodge)
+        const pointer = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
+        let rafLock = false;
+
+        document.addEventListener("pointermove", (e) => {
+          pointer.x = e.clientX;
+          pointer.y = e.clientY;
+
+          if (!dodgeEnabled) return;
+          if (rafLock) return;
+          rafLock = true;
+
+          requestAnimationFrame(() => {
+            rafLock = false;
+
+            const r = noBtn.getBoundingClientRect();
+            const cx = r.left + r.width / 2;
+            const cy = r.top + r.height / 2;
+
+            const dist = Math.hypot(cx - pointer.x, cy - pointer.y);
+            if (dist < dangerRadius) moveAway(e);
+          });
+        });
+
+        // Current translation (applied via CSS vars)
+        let tx = 0;
+        let ty = 0;
+
+        // "Home" position (where NO sits when tx/ty = 0)
+        let home = null;
+
+        const clamp = (v, min, max) => Math.min(max, Math.max(min, v));
+
+        function setVars() {
+          noBtn.style.setProperty("--tx", `${tx}px`);
+          noBtn.style.setProperty("--ty", `${ty}px`);
+        }
+
+        function measureHome() {
+          tx = 0;
+          ty = 0;
+          setVars();
+          home = noBtn.getBoundingClientRect();
+        }
+
+        function overlaps(a, b) {
+          return !(
+            a.right < b.left ||
+            a.left > b.right ||
+            a.bottom < b.top ||
+            a.top > b.bottom
+          );
+        }
+
+        function expandedYesRect(p) {
+          const r = yesBtn.getBoundingClientRect();
+          return {
+            left: r.left - p,
+            top: r.top - p,
+            right: r.right + p,
+            bottom: r.bottom + p,
+          };
+        }
+
+        function moveAway(e) {
+          if (!dodgeEnabled) return;
+          if (!home) measureHome();
+
+          const px = e?.clientX ?? pointer.x;
+          const py = e?.clientY ?? pointer.y;
+
+          const w = home.width;
+          const h = home.height;
+
+          // Current absolute position of NO (home/translation)
+          const curLeft = home.left + tx;
+          const curTop = home.top + ty;
+
+          const cx = curLeft + w / 2;
+          const cy = curTop + h / 2;
+
+          // Direction away from pointer
+          let dx = cx - px;
+          let dy = cy - py;
+          const len = Math.hypot(dx, dy) || 1;
+          dx /= len;
+          dy /= len;
+
+          // DIFFICULTY KNOBS
+          const viewportPad = 8;
+          const edgeBuffer = 50; // lower = easier, but too low can reintroduce corner-traps
+          const avoidPad = 28;    // space around YES
+          const minDist = 200;    // lower = easier (it can stay closer)
+          const step = 270;       // lower = easier (smaller jumps)
+
+          const yesRect = expandedYesRect(avoidPad);
+
+          // Safe bounds (still prevents corner trapping, just less strict)
+          const minLeft = viewportPad + edgeBuffer;
+          const minTop = viewportPad + edgeBuffer;
+          const maxLeft = Math.max(
+            minLeft,
+            window.innerWidth - w - viewportPad - edgeBuffer
+          );
+          const maxTop = Math.max(
+            minTop,
+            window.innerHeight - h - viewportPad - edgeBuffer
+          );
+
+          for (let i = 0; i < 22; i++) {
+            const jitterX = (Math.random() - 0.5) * 150;
+            const jitterY = (Math.random() - 0.5) * 150;
+
+            const rawLeft = curLeft + dx * step + jitterX;
+            const rawTop = curTop + dy * step + jitterY;
+
+            const absLeft = clamp(rawLeft, minLeft, maxLeft);
+            const absTop = clamp(rawTop, minTop, maxTop);
+
+            // Reject moves that had to clamp (reduces corner-sticking)
+            if (
+              Math.abs(absLeft - rawLeft) > 0.5 ||
+              Math.abs(absTop - rawTop) > 0.5
+            ) {
+              continue;
+            }
+
+            const cand = {
+              left: absLeft,
+              top: absTop,
+              right: absLeft + w,
+              bottom: absTop + h,
+            };
+
+            if (overlaps(cand, yesRect)) continue;
+
+            const dist = Math.hypot(absLeft + w / 2 - px, absTop + h / 2 - py);
+            if (dist < minDist) continue;
+
+            tx = absLeft - home.left;
+            ty = absTop - home.top;
+            setVars();
+
+            // If still under cursor, reroll (prevents free clicks from edge cases)
+            requestAnimationFrame(() => {
+              const r = noBtn.getBoundingClientRect();
+              const inside =
+                px >= r.left && px <= r.right && py >= r.top && py <= r.bottom;
+              if (inside) moveAway();
+            });
+
+            return;
+          }
+        }
+
+        // Initial measurement + keep stable on resize
+        measureHome();
+        window.addEventListener("resize", measureHome);
+
+        // Dodge behavior
+        noBtn.addEventListener("pointerenter", moveAway);
+
+        // Redirect logic lives here (reliable even when preventing default)
+        noBtn.addEventListener("pointerdown", (e) => {
+          if (!dodgeEnabled) {
+            window.location.href = noPage;
+            return;
+          }
+
+          if (Math.random() < dodgeChance) {
+            e.preventDefault();
+            moveAway(e);
+          } else {
+            window.location.href = noPage;
+          }
+        });
+      });
+    </script>
+  </body>
+</html>
